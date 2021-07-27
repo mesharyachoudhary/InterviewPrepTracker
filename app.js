@@ -18,7 +18,7 @@ const Question = require('./models/Question');
 const Experience = require('./models/Experience');
 const Company = require('./models/Company');
 const app = express();
-
+const bodyParser = require('body-parser');
 // Passport Config
 require('./config/passport')(passport);
 
@@ -39,7 +39,7 @@ app.use(expressLayouts);
 app.set('view engine', 'ejs');
 
 // Express body parser
-app.use(express.urlencoded({ extended: true }));
+
 
 // Express session
 app.use(
@@ -69,10 +69,23 @@ const adminBro = new AdminBro({
   databases: [mongoose],
   rootPath: '/admin',
 })
-
-const router = AdminBroExpress.buildRouter(adminBro)
+const ADMIN = {
+  email:require('./config/keys').ADMIN_EMAIL,
+  password: require('./config/keys').ADMIN_PASSWORD,
+}
+const router = AdminBroExpress.buildAuthenticatedRouter(adminBro, {
+  cookieName: process.env.ADMIN_COOKIE_NAME || 'admin-bro',
+  cookiePassword: process.env.ADMIN_COOKIE_PASS || 'supersecret-and-long-password-for-a-cookie-in-the-browser',
+  authenticate: async (email, password) => {
+    if (email === ADMIN.email && password === ADMIN.password) {
+      return ADMIN
+    }
+    return null
+  }
+})
 app.use(adminBro.options.rootPath, router)
-
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/', require('./routes/index.js'));
 app.use('/users', require('./routes/users.js'));
